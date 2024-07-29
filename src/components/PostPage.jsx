@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -15,7 +14,7 @@ const PostPage = ({ setPosts, posts, handleDelete }) => {
   const [body, setBody] = useState("");
   const [edit, setEdit] = useState(false);
 
-  const handleEdit = (id) => {
+  const handleEdit = async (id) => {
     const editPosts = posts.map((post) => {
       if (post.id === id) {
         return {
@@ -28,8 +27,29 @@ const PostPage = ({ setPosts, posts, handleDelete }) => {
         return post;
       }
     });
-    setPosts(editPosts);
-    setEdit(false);
+
+    setError(null);
+    try {
+      const response = await fetch(`${base_url}/posts/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...editPosts.find((post) => post.id === id),
+          title,
+          body,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Response was not ok!");
+      }
+      setPosts(editPosts);
+      setEdit(false);
+    } catch (error) {
+      console.error(error);
+      setError(error.message);
+    }
   };
 
   useEffect(() => {
@@ -39,46 +59,11 @@ const PostPage = ({ setPosts, posts, handleDelete }) => {
     }
   }, [post]);
 
-   async function handleDelete(id) {
-   const editedPost = posts.find((post) => post.id === id);
-   setError(null); 
-    try{
-      const response = await fetch(`${base_url}/posts/{id}`,{
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({...editedPost, title, body}),
-      }); 
-       if (!response.ok) {
-        throw new Error("Response was not ok!");
-      }
-    
-         const editedPosts = posts.map((post) => {
-           if (post.id === id) {
-             return { ...post, title, body };
-           } else {
-             return post;
-           }
-         });
-         setPosts(editedPosts);
-         setEdit(false);
-
-    }catch (error){
-        console.error(error);
-        setError(error.message);
-    }
-
-
- 
-
-  }
-
   return (
     <main className="PostPage">
-      {error && <p style={{color: "red"}}>{error}</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
       <article className="post">
-        {post && (
+        {post ? (
           <>
             {edit ? (
               <input
@@ -120,8 +105,7 @@ const PostPage = ({ setPosts, posts, handleDelete }) => {
               </button>
             </div>
           </>
-        )}
-        {!post && (
+        ) : (
           <>
             <h2>Post Not Found</h2>
             <p>Well, that's disappointing.</p>
